@@ -1,0 +1,36 @@
+# =========================
+# Frontend - Node/Vite
+# =========================
+Frontend/node_modules/
+Frontend/dist/
+
+# =========================
+# Backend - Python/Django
+# =========================
+Backend/venv/
+Backend/venv313/
+Backend/env/
+Backend/.venv/
+Backend/__pycache__/
+Backend/**/__pycache__/
+Backend/*.pyc
+Backend/**/**/*.pyc
+
+# Django generated files
+Backend/staticfiles/
+Backend/media/
+Backend/*.sqlite3
+
+# Environment variables
+.env
+Backend/.env
+Frontend/.env
+Frontend/.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
