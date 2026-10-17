@@ -226,9 +226,58 @@ export async function loginAdmin({
   identifier,
   password,
 }) {
-  throw new Error(
-    'Admin frontend login is not connected yet.'
+  if (!identifier || !password) {
+    throw new Error(
+      'Enter your email and password.'
+    );
+  }
+
+  const data = await api.login({
+    email: identifier,
+    password,
+  });
+
+  localStorage.setItem(
+    'workbridge_access_token',
+    data.access
   );
+
+  localStorage.setItem(
+    'workbridge_refresh_token',
+    data.refresh
+  );
+
+  const userData = await api.apiRequest(
+    '/auth/profile/',
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!userData.is_staff) {
+    localStorage.removeItem(
+      'workbridge_access_token'
+    );
+
+    localStorage.removeItem(
+      'workbridge_refresh_token'
+    );
+
+    throw new Error(
+      'This account does not have admin access.'
+    );
+  }
+
+  const user = {
+    id: userData.id,
+    email: userData.email,
+    name: userData.name || userData.email,
+    role: 'admin',
+  };
+
+  writeStoredUser(user);
+
+  return user;
 }
 
 

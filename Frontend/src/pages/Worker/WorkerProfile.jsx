@@ -14,6 +14,9 @@ import {
   Users as UsersIcon,
   Calendar,
   Clock,
+  Camera,
+  X,
+  Loader2,
 } from 'lucide-react';
 
 import * as api from '../../api/api';
@@ -109,6 +112,11 @@ export default function WorkerProfile() {
   const [services, setServices] =
     useState([]);
 
+  const [
+  photoUploading,
+  setPhotoUploading,
+] = useState(false);
+
 
   // =====================================================
   // REVIEW STATE
@@ -158,6 +166,10 @@ export default function WorkerProfile() {
 
   const isCustomer =
     currentRole === 'customer';
+
+console.log("Stored user:", localStorage.getItem("workbridge_user"));
+console.log("Current role:", currentRole);
+console.log("Is customer:", isCustomer);
 
   const isProvider =
     currentRole === 'provider';
@@ -261,6 +273,124 @@ export default function WorkerProfile() {
       'Saving workers is not connected yet.'
     );
   };
+
+
+  // =====================================================
+// PROFILE PHOTO
+// =====================================================
+
+const handleProfilePhotoChange = async (event) => {
+  const file =
+    event.target.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  // Only allow images
+  if (!file.type.startsWith('image/')) {
+    showToast(
+      'Please select a valid image file.'
+    );
+
+    event.target.value = '';
+    return;
+  }
+
+  // 5 MB limit
+  if (file.size > 5 * 1024 * 1024) {
+    showToast(
+      'Profile photo must be smaller than 5 MB.'
+    );
+
+    event.target.value = '';
+    return;
+  }
+
+  setPhotoUploading(true);
+
+  try {
+    const formData = new FormData();
+
+    formData.append(
+      'profile_image',
+      file,
+      file.name || 'profile-image.jpg'
+    );
+
+    await api.updateWorkerProfile(
+      formData
+    );
+
+    // Reload the profile so the new
+    // image URL is mapped correctly.
+    const updatedWorker =
+      await workerService.getWorkerProfile();
+
+    setWorker(
+      updatedWorker
+    );
+
+    showToast(
+      'Profile photo updated successfully.'
+    );
+
+  } catch (error) {
+    console.error(
+      'Profile photo upload failed:',
+      error
+    );
+
+    showToast(
+      error?.message ||
+        'Failed to update profile photo.'
+    );
+
+  } finally {
+    setPhotoUploading(false);
+
+    // Allow selecting the same file again.
+    event.target.value = '';
+  }
+};
+
+
+const handleRemoveProfilePhoto = async () => {
+  if (!worker?.profileImage) {
+    return;
+  }
+
+  setPhotoUploading(true);
+
+  try {
+    await api.removeWorkerProfileImage();
+
+    const updatedWorker =
+      await workerService.getWorkerProfile();
+
+    setWorker(
+      updatedWorker
+    );
+
+    showToast(
+      'Profile photo removed successfully.'
+    );
+
+  } catch (error) {
+    console.error(
+      'Profile photo removal failed:',
+      error
+    );
+
+    showToast(
+      error?.message ||
+        'Failed to remove profile photo.'
+    );
+
+  } finally {
+    setPhotoUploading(false);
+  }
+};
 
 
   // =====================================================
@@ -384,9 +514,86 @@ export default function WorkerProfile() {
 
           <div className="flex flex-col sm:flex-row gap-5">
 
-            <div className="h-24 w-24 rounded-2xl bg-white dark:bg-navy-900 shadow-card flex items-center justify-center text-2xl font-extrabold text-navy-700 dark:text-white ring-4 ring-white dark:ring-navy-950 -mt-14 sm:mt-0 shrink-0">
-              {worker.avatar}
-            </div>
+          <div className="relative h-24 w-24 shrink-0 -mt-14 sm:mt-0">
+
+  <div className="h-24 w-24 rounded-2xl bg-white dark:bg-navy-900 shadow-card flex items-center justify-center text-2xl font-extrabold text-navy-700 dark:text-white ring-4 ring-white dark:ring-navy-950 overflow-hidden">
+
+    {worker.profileImage ? (
+      <img
+        src={worker.profileImage}
+        alt={`${worker.name} profile`}
+        className="h-full w-full object-cover"
+      />
+    ) : (
+      worker.avatar
+    )}
+
+  </div>
+
+
+  {/* ===============================================
+      CHANGE PHOTO BUTTON - WORKER ONLY
+  =============================================== */}
+
+  {isProvider && (
+    <>
+      <label
+        htmlFor="worker-profile-photo"
+        className={`absolute -right-2 -bottom-2 h-9 w-9 rounded-full bg-primary-600 text-white shadow-lg flex items-center justify-center cursor-pointer hover:bg-primary-700 transition-colors ${
+          photoUploading
+            ? 'opacity-60 pointer-events-none'
+            : ''
+        }`}
+        title="Change profile photo"
+      >
+
+        {photoUploading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Camera className="h-4 w-4" />
+        )}
+
+      </label>
+
+
+      <input
+        id="worker-profile-photo"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={
+          handleProfilePhotoChange
+        }
+        disabled={photoUploading}
+      />
+
+
+      {/* REMOVE PHOTO */}
+
+      {worker.profileImage && (
+        <button
+          type="button"
+          onClick={
+            handleRemoveProfilePhoto
+          }
+          disabled={photoUploading}
+          className="absolute -right-2 -top-2 h-7 w-7 rounded-full bg-red-500 text-white shadow-md flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-60"
+          title="Remove profile photo"
+        >
+
+          {photoUploading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <X className="h-3.5 w-3.5" />
+          )}
+
+        </button>
+      )}
+
+    </>
+  )}
+
+</div>
 
 
             <div className="flex-1 min-w-0">

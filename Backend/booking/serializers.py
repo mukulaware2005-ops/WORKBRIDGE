@@ -78,3 +78,75 @@ class BookingSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+
+
+# =========================================================
+# BOOKING MANAGEMENT
+# =========================================================
+
+class AdminBookingSerializer(serializers.ModelSerializer):
+
+    customer_email = serializers.EmailField(
+        source="customer.email",
+        read_only=True
+    )
+
+    worker_email = serializers.EmailField(
+        source="worker.user.email",
+        read_only=True
+    )
+
+    worker_name = serializers.CharField(
+        source="worker.title",
+        read_only=True
+    )
+
+    service_name = serializers.CharField(
+        source="service.name",
+        read_only=True
+    )
+
+    class Meta:
+        model = Booking
+
+        fields = [
+            "id",
+
+            "customer",
+            "customer_email",
+
+            "worker",
+            "worker_email",
+            "worker_name",
+
+            "service",
+            "service_name",
+
+            "date",
+            "time",
+            "location",
+            "message",
+            "price",
+            "status",
+
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "customer",
+            "customer_email",
+            "worker",
+            "worker_email",
+            "worker_name",
+            "service",
+            "service_name",
+            "date",
+            "time",
+            "location",
+            "message",
+            "price",
+            "created_at",
+            "updated_at",
+        ]

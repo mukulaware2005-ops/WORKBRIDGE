@@ -8,30 +8,75 @@ export default function SearchFilters({ filters, setFilters }) {
     <div className="card p-5 space-y-6 sticky top-24">
       <div className="flex items-center gap-2">
         <Sliders className="h-4 w-4 text-navy-400" />
-        <h3 className="font-semibold text-navy-900 dark:text-white text-sm">Filters</h3>
+        <h3 className="font-semibold text-navy-900 dark:text-white text-sm">
+          Filters
+        </h3>
       </div>
 
+      {/* Category */}
       <div>
         <label className="label">Category</label>
-        <select className="input" value={filters.category} onChange={(e) => update('category', e.target.value)}>
+
+        <select
+          className="input"
+          value={filters.category}
+          onChange={(e) =>
+            update('category', e.target.value)
+          }
+        >
           <option value="">All categories</option>
-          {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+
+          {CATEGORIES.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
         </select>
       </div>
 
+      {/* Distance */}
       <div>
-        <label className="label">Max Distance: {filters.maxDistance} km</label>
-        <input type="range" min="1" max="10" value={filters.maxDistance} onChange={(e) => update('maxDistance', Number(e.target.value))} className="w-full accent-primary-600" />
+        <label className="label">
+          Max Distance: {filters.maxDistance} km
+        </label>
+
+        <input
+          type="range"
+          min="1"
+          max="50"
+          step="1"
+          value={filters.maxDistance}
+          onChange={(e) =>
+            update(
+              'maxDistance',
+              Number(e.target.value)
+            )
+          }
+          className="w-full accent-primary-600"
+        />
+
+        <div className="flex justify-between text-xs text-navy-400 mt-1">
+          <span>1 km</span>
+          <span>50 km</span>
+        </div>
       </div>
 
+      {/* Minimum Rating */}
       <div>
         <label className="label">Minimum Rating</label>
+
         <div className="flex gap-1.5">
           {[0, 3, 3.5, 4, 4.5].map((r) => (
             <button
               key={r}
-              onClick={() => update('minRating', r)}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border ${filters.minRating === r ? 'bg-primary-600 text-white border-primary-600' : 'border-navy-200 dark:border-navy-700 text-navy-500'}`}
+              onClick={() =>
+                update('minRating', r)
+              }
+              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border ${
+                filters.minRating === r
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'border-navy-200 dark:border-navy-700 text-navy-500'
+              }`}
             >
               {r === 0 ? 'Any' : `${r}+`}
             </button>
@@ -39,32 +84,87 @@ export default function SearchFilters({ filters, setFilters }) {
         </div>
       </div>
 
+      {/* Gender */}
       <div>
         <label className="label">Gender</label>
-        <select className="input" value={filters.gender} onChange={(e) => update('gender', e.target.value)}>
+
+        <select
+          className="input"
+          value={filters.gender}
+          onChange={(e) =>
+            update('gender', e.target.value)
+          }
+        >
           <option value="">Any</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>
         </select>
       </div>
 
+      {/* Other Filters */}
       <div className="space-y-3">
         <label className="flex items-center justify-between text-sm text-navy-700 dark:text-navy-200">
           Verified only
-          <input type="checkbox" checked={filters.verifiedOnly} onChange={(e) => update('verifiedOnly', e.target.checked)} className="h-4 w-4 rounded accent-primary-600" />
+
+          <input
+            type="checkbox"
+            checked={filters.verifiedOnly}
+            onChange={(e) =>
+              update(
+                'verifiedOnly',
+                e.target.checked
+              )
+            }
+            className="h-4 w-4 rounded accent-primary-600"
+          />
         </label>
+
         <label className="flex items-center justify-between text-sm text-navy-700 dark:text-navy-200">
           Available today
-          <input type="checkbox" checked={filters.availableToday} onChange={(e) => update('availableToday', e.target.checked)} className="h-4 w-4 rounded accent-primary-600" />
+
+          <input
+            type="checkbox"
+            checked={filters.availableToday}
+            onChange={(e) =>
+              update(
+                'availableToday',
+                e.target.checked
+              )
+            }
+            className="h-4 w-4 rounded accent-primary-600"
+          />
         </label>
+
         <label className="flex items-center justify-between text-sm text-navy-700 dark:text-navy-200">
           Emergency availability
-          <input type="checkbox" checked={filters.emergency} onChange={(e) => update('emergency', e.target.checked)} className="h-4 w-4 rounded accent-primary-600" />
+
+          <input
+            type="checkbox"
+            checked={filters.emergency}
+            onChange={(e) =>
+              update(
+                'emergency',
+                e.target.checked
+              )
+            }
+            className="h-4 w-4 rounded accent-primary-600"
+          />
         </label>
       </div>
 
+      {/* Clear Filters */}
       <button
-        onClick={() => setFilters({ category: '', maxDistance: 10, minRating: 0, gender: '', verifiedOnly: false, availableToday: false, emergency: false })}
+        onClick={() =>
+          setFilters({
+            category: '',
+            maxDistance: 10,
+            minRating: 0,
+            gender: '',
+            verifiedOnly: false,
+            availableToday: false,
+            emergency: false,
+          })
+        }
         className="btn-ghost w-full py-2 text-sm"
       >
         Clear all filters

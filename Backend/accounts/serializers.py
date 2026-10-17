@@ -1,10 +1,17 @@
+
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-
-from .models import User, WorkerProfile, Skill, Service, Review
 from django.db.models import Avg
 
+from .models import User, WorkerProfile, Skill, Service, Review
+
+
+# =========================================================
+# REGISTER
+# =========================================================
+
 class RegisterSerializer(serializers.ModelSerializer):
+
     password = serializers.CharField(
         write_only=True,
         min_length=8
@@ -13,9 +20,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "email", 
-            "password", 
-            "role", 
+            "email",
+            "password",
+            "role",
         ]
 
     def create(self, validated_data):
@@ -26,13 +33,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
 
+# =========================================================
+# LOGIN
+# =========================================================
+
 class LoginSerializer(serializers.Serializer):
+
     email = serializers.EmailField()
+
     password = serializers.CharField(
         write_only=True
     )
 
     def validate(self, attrs):
+
         email = attrs.get("email")
         password = attrs.get("password")
 
@@ -56,22 +70,61 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+# =========================================================
+# USER / PROFILE
+# =========================================================
+
+class UserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+
+        fields = [
+            "id",
+            "email",
+            "role",
+            "is_email_verified",
+            "is_staff",
+            "is_superuser",
+            "address",
+            "latitude",
+            "longitude",
+        ]
+
+        read_only_fields = [
+            "id",
+            "email",
+            "role",
+            "is_email_verified",
+            "is_staff",
+            "is_superuser",
+        ]
+
+
+# =========================================================
+# SKILL
+# =========================================================
 
 class SkillSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Skill
+
         fields = [
             "id",
             "name",
         ]
 
 
-
+# =========================================================
+# SERVICE
+# =========================================================
 
 class ServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Service
+
         fields = [
             "id",
             "worker",
@@ -93,9 +146,12 @@ class ServiceSerializer(serializers.ModelSerializer):
         ]
 
 
-
+# =========================================================
+# REVIEW
+# =========================================================
 
 class ReviewSerializer(serializers.ModelSerializer):
+
     customer_email = serializers.EmailField(
         source="customer.email",
         read_only=True,
@@ -108,6 +164,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
+
         fields = [
             "id",
             "worker",
@@ -129,11 +186,16 @@ class ReviewSerializer(serializers.ModelSerializer):
         ]
 
 
-
+# =========================================================
+# WORKER PROFILE
+# =========================================================
 
 class WorkerProfileSerializer(serializers.ModelSerializer):
+
     skills = serializers.ListField(
-        child=serializers.CharField(max_length=100),
+        child=serializers.CharField(
+            max_length=100
+        ),
         required=False,
         write_only=True,
     )
@@ -144,32 +206,49 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
     )
 
     rating = serializers.SerializerMethodField()
+
     reviews_count = serializers.SerializerMethodField()
+
+    recommended = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkerProfile
+
         fields = [
             "id",
             "user",
             "email",
+
+            # Worker profile image
+            "profile_image",
+
             "title",
             "category",
             "experience_years",
             "about",
+
             "city",
             "area",
+
+            # Location
+            "latitude",
+            "longitude",
+
             "languages",
             "skills",
             "gender",
+
             "starting_price",
             "hourly_rate",
             "emergency_charge",
             "emergency_available",
+
             "working_days",
             "working_hours",
 
             "rating",
             "reviews_count",
+            "recommended",
 
             "is_premium",
             "is_featured",
@@ -177,25 +256,32 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
             "is_police_verified",
             "is_certificate_verified",
             "is_phone_verified",
+
             "created_at",
             "updated_at",
         ]
+
         read_only_fields = [
             "id",
             "user",
+
             "is_premium",
             "is_featured",
             "is_identity_verified",
             "is_police_verified",
             "is_certificate_verified",
             "is_phone_verified",
+
             "created_at",
             "updated_at",
         ]
 
-
+    # -----------------------------------------------------
+    # RATING
+    # -----------------------------------------------------
 
     def get_rating(self, obj):
+
         average = obj.reviews.aggregate(
             average=Avg("rating")
         )["average"]
@@ -205,40 +291,90 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
 
         return round(average, 1)
 
+    # -----------------------------------------------------
+    # REVIEWS COUNT
+    # -----------------------------------------------------
+
     def get_reviews_count(self, obj):
         return obj.reviews.count()
 
+    # -----------------------------------------------------
+    # RECOMMENDED
+    # -----------------------------------------------------
 
+    def get_recommended(self, obj):
 
+        recommended_worker_ids = self.context.get(
+            "recommended_worker_ids",
+            []
+        )
+
+        return obj.id in recommended_worker_ids
+
+    # -----------------------------------------------------
+    # CREATE
+    # -----------------------------------------------------
 
     def create(self, validated_data):
-        skills_data = validated_data.pop("skills", [])
+
+        skills_data = validated_data.pop(
+            "skills",
+            []
+        )
 
         profile = WorkerProfile.objects.create(
             **validated_data
         )
 
-        self._set_skills(profile, skills_data)
+        self._set_skills(
+            profile,
+            skills_data
+        )
 
         return profile
 
+    # -----------------------------------------------------
+    # UPDATE
+    # -----------------------------------------------------
+
     def update(self, instance, validated_data):
-        skills_data = validated_data.pop("skills", None)
+
+        skills_data = validated_data.pop(
+            "skills",
+            None
+        )
 
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            setattr(
+                instance,
+                attr,
+                value
+            )
 
         instance.save()
 
         if skills_data is not None:
-            self._set_skills(instance, skills_data)
+            self._set_skills(
+                instance,
+                skills_data
+            )
 
         return instance
 
-    def _set_skills(self, profile, skills_data):
+    # -----------------------------------------------------
+    # SET SKILLS
+    # -----------------------------------------------------
+
+    def _set_skills(
+        self,
+        profile,
+        skills_data
+    ):
+
         skills = []
 
         for skill_name in skills_data:
+
             skill_name = skill_name.strip()
 
             if not skill_name:
@@ -257,8 +393,15 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
 
         profile.skills.set(skills)
 
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
     def to_representation(self, instance):
-        data = super().to_representation(instance)
+
+        data = super().to_representation(
+            instance
+        )
 
         data["skills"] = list(
             instance.skills.values_list(

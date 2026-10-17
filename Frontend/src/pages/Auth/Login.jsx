@@ -1,125 +1,3 @@
-// import { useState } from 'react';
-// import { Link, useNavigate, useParams } from 'react-router-dom';
-// import { Eye, EyeOff, Loader2 } from 'lucide-react';
-// import { useAuth } from '../../context/AuthContext';
-// import { useApp } from '../../context/AppContext';
-// import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-
-// export default function Login() {
-//   const { role } = useParams(); // 'customer' | 'provider'
-//   const isProvider = role === 'provider';
-//   useDocumentTitle(isProvider ? 'Provider Login' : 'Customer Login');
-//   const { login, loginWithGoogle } = useAuth();
-//   const { showToast } = useApp();
-//   const navigate = useNavigate();
-
-//   const [identifier, setIdentifier] = useState('');
-//   const [password, setPassword] = useState('');
-//   const [showPass, setShowPass] = useState(false);
-//   const [error, setError] = useState('');
-//   const [loading, setLoading] = useState(false);
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     setError('');
-//     setLoading(true);
-//     try {
-//       await login({ identifier, password, role });
-//       showToast(`Welcome back!`);
-//       navigate(isProvider ? '/dashboard/provider' : '/dashboard/customer');
-//     } catch (err) {
-//       setError(err.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const handleGoogle = async () => {
-//     setLoading(true);
-//     try {
-//       await loginWithGoogle({ role });
-//       showToast('Signed in with Google');
-//       navigate(isProvider ? '/dashboard/provider' : '/dashboard/customer');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div>
-//       <h1 className="text-2xl font-extrabold text-navy-900 dark:text-white">
-//         {isProvider ? 'Welcome Back, Professional' : 'Welcome Back'}
-//       </h1>
-//       <p className="text-navy-500 dark:text-navy-400 mt-2">Log in to continue to WorkBridge.</p>
-
-//       {error && <div className="mt-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2.5">{error}</div>}
-
-//       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-//         <div>
-//           <label className="label">Email or Phone</label>
-//           <input className="input" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@example.com" required />
-//         </div>
-//         <div>
-//           <div className="flex items-center justify-between">
-//             <label className="label">Password</label>
-//             <Link to={`/forgot-password/${role}`} className="text-xs font-medium text-primary-600 hover:text-primary-700 mb-1.5">
-//               Forgot Password?
-//             </Link>
-//           </div>
-//           <div className="relative">
-//             <input type={showPass ? 'text' : 'password'} className="input pr-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
-//             <button type="button" onClick={() => setShowPass((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400" aria-label="Toggle password visibility">
-//               {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-//             </button>
-//           </div>
-//         </div>
-//         <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-//           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Login'}
-//         </button>
-//       </form>
-
-//       <div className="flex items-center gap-3 my-6">
-//         <div className="h-px flex-1 bg-navy-100 dark:bg-navy-800" />
-//         <span className="text-xs text-navy-400">OR</span>
-//         <div className="h-px flex-1 bg-navy-100 dark:bg-navy-800" />
-//       </div>
-
-//       <div className="space-y-3">
-//         <button onClick={handleGoogle} disabled={loading} className="btn-outline w-full py-2.5 bg-white dark:bg-navy-900">
-//           <GoogleIcon /> Continue with Google
-//         </button>
-//         <Link to="/verify-otp" state={{ role }} className="btn-outline w-full py-2.5 bg-white dark:bg-navy-900 flex">
-//           Continue with OTP
-//         </Link>
-//       </div>
-
-//       <p className="text-sm text-navy-500 dark:text-navy-400 text-center mt-6">
-//         Don't have an account?{' '}
-//         <Link to={`/signup/${role}`} className="font-semibold text-primary-600 hover:text-primary-700">
-//           Create {isProvider ? 'Professional' : 'Customer'} Account
-//         </Link>
-//       </p>
-
-//       <Link to={`/login/${isProvider ? 'customer' : 'provider'}`} className="block text-center text-sm font-medium text-navy-500 dark:text-navy-400 hover:text-navy-700 mt-3">
-//         {isProvider ? 'Login as Customer' : 'Login as Service Provider'}
-//       </Link>
-//     </div>
-//   );
-// }
-
-// function GoogleIcon() {
-//   return (
-//     <svg className="h-4 w-4" viewBox="0 0 24 24">
-//       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-//       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-//       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-//       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-//     </svg>
-//   );
-// }
-
-
-
 
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -130,11 +8,139 @@ import { useApp } from '../../context/AppContext';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import * as api from '../../api/api';
 
+const PROFILE_IMAGE_DB = 'workbridge_profile_images';
+const PROFILE_IMAGE_STORE = 'images';
+const PROFILE_IMAGE_KEY = 'pending_worker_profile_image';
+
+// ======================================================
+// GET PENDING PROFILE IMAGE FROM INDEXED DB
+// ======================================================
+
+function openProfileImageDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(
+      PROFILE_IMAGE_DB,
+      1
+    );
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+
+      if (
+        !db.objectStoreNames.contains(
+          PROFILE_IMAGE_STORE
+        )
+      ) {
+        db.createObjectStore(
+          PROFILE_IMAGE_STORE
+        );
+      }
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onerror = () => {
+      reject(
+        request.error ||
+          new Error(
+            'Unable to open image storage.'
+          )
+      );
+    };
+  });
+}
+
+
+async function getPendingProfileImage() {
+  try {
+    const db =
+      await openProfileImageDB();
+
+    return new Promise((resolve) => {
+      const transaction =
+        db.transaction(
+          PROFILE_IMAGE_STORE,
+          'readonly'
+        );
+
+      const store =
+        transaction.objectStore(
+          PROFILE_IMAGE_STORE
+        );
+
+      const request =
+        store.get(
+          PROFILE_IMAGE_KEY
+        );
+
+      request.onsuccess = () => {
+        const file = request.result;
+
+        db.close();
+
+        resolve(file || null);
+      };
+
+      request.onerror = () => {
+        db.close();
+        resolve(null);
+      };
+    });
+  } catch {
+    return null;
+  }
+}
+
+
+async function removePendingProfileImage() {
+  try {
+    const db =
+      await openProfileImageDB();
+
+    return new Promise((resolve) => {
+      const transaction =
+        db.transaction(
+          PROFILE_IMAGE_STORE,
+          'readwrite'
+        );
+
+      const store =
+        transaction.objectStore(
+          PROFILE_IMAGE_STORE
+        );
+
+      const request =
+        store.delete(
+          PROFILE_IMAGE_KEY
+        );
+
+      request.onsuccess = () => {
+        db.close();
+        resolve();
+      };
+
+      request.onerror = () => {
+        db.close();
+        resolve();
+      };
+    });
+  } catch {
+    return;
+  }
+}
+
+
+// ======================================================
+// LOGIN
+// ======================================================
 
 export default function Login() {
   const { role } = useParams();
 
-  const isProvider = role === 'provider';
+  const isProvider =
+    role === 'provider';
 
   useDocumentTitle(
     isProvider
@@ -143,92 +149,385 @@ export default function Login() {
   );
 
   const { login } = useAuth();
-  const { showToast } = useApp();
-  const navigate = useNavigate();
 
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPass, setShowPass] = useState(false);
+  const { showToast } =
+    useApp();
 
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const navigate =
+    useNavigate();
 
+  const [identifier, setIdentifier] =
+    useState('');
+
+  const [password, setPassword] =
+    useState('');
+
+  const [showPass, setShowPass] =
+    useState(false);
+
+  const [error, setError] =
+    useState('');
+
+  const [loading, setLoading] =
+    useState(false);
+
+
+  // ======================================================
+  // SUBMIT LOGIN
+  // ======================================================
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  setError('');
-  setLoading(true);
+    setError('');
+    setLoading(true);
 
-  try {
-    await login({
-      identifier,
-      password,
-      role,
-    });
+    try {
 
-    // Provider only:
-    // Check whether signup stored a pending WorkerProfile.
-    if (isProvider) {
-      const pendingRaw = localStorage.getItem(
-        'workbridge_pending_worker_profile'
-      );
+      // --------------------------------------------------
+      // LOGIN
+      // --------------------------------------------------
 
-      if (pendingRaw) {
-        const pendingProfile = JSON.parse(pendingRaw);
+      await login({
+        identifier,
+        password,
+        role,
+      });
 
-        try {
-          await api.apiRequest(
-            api.API_ENDPOINTS.workerProfile,
-            {
-              method: 'POST',
-              body: pendingProfile,
-            }
-          );
 
-          // WorkerProfile successfully created.
-          localStorage.removeItem(
+      // --------------------------------------------------
+      // CREATE PENDING WORKER PROFILE
+      // --------------------------------------------------
+
+      if (isProvider) {
+
+        const pendingRaw =
+          localStorage.getItem(
             'workbridge_pending_worker_profile'
           );
 
-          showToast(
-            'Professional profile created successfully!'
-          );
 
-        } catch (profileError) {
-          // If the profile already exists, remove stale pending data.
-          if (
-            profileError.message
-              .toLowerCase()
-              .includes('already exists')
-          ) {
+        if (pendingRaw) {
+
+          const pendingProfile =
+            JSON.parse(
+              pendingRaw
+            );
+
+
+          try {
+
+            // --------------------------------------------
+            // Get profile image from IndexedDB
+            // --------------------------------------------
+
+            const profileImage =
+              await getPendingProfileImage();
+
+
+            // --------------------------------------------
+            // Build multipart form data
+            // --------------------------------------------
+
+            const formData =
+              new FormData();
+
+
+            // --------------------------------------------
+            // Text fields
+            // --------------------------------------------
+
+            if (
+              pendingProfile.title !==
+              undefined
+            ) {
+              formData.append(
+                'title',
+                pendingProfile.title
+              );
+            }
+
+
+            if (
+              pendingProfile.category !==
+              undefined
+            ) {
+              formData.append(
+                'category',
+                pendingProfile.category
+              );
+            }
+
+
+            if (
+              pendingProfile.experience_years !==
+              undefined
+            ) {
+              formData.append(
+                'experience_years',
+                String(
+                  pendingProfile.experience_years
+                )
+              );
+            }
+
+
+            if (
+              pendingProfile.about !==
+              undefined
+            ) {
+              formData.append(
+                'about',
+                pendingProfile.about
+              );
+            }
+
+
+            if (
+              pendingProfile.city !==
+              undefined
+            ) {
+              formData.append(
+                'city',
+                pendingProfile.city
+              );
+            }
+
+
+            if (
+              pendingProfile.area !==
+              undefined
+            ) {
+              formData.append(
+                'area',
+                pendingProfile.area
+              );
+            }
+
+
+            if (
+              pendingProfile.starting_price !==
+              undefined
+            ) {
+              formData.append(
+                'starting_price',
+                String(
+                  pendingProfile.starting_price
+                )
+              );
+            }
+
+
+            if (
+              pendingProfile.hourly_rate !==
+              undefined &&
+              pendingProfile.hourly_rate !==
+              null &&
+              pendingProfile.hourly_rate !==
+              ''
+            ) {
+              formData.append(
+                'hourly_rate',
+                String(
+                  pendingProfile.hourly_rate
+                )
+              );
+            }
+
+
+            if (
+              pendingProfile.emergency_charge !==
+              undefined &&
+              pendingProfile.emergency_charge !==
+              null &&
+              pendingProfile.emergency_charge !==
+              ''
+            ) {
+              formData.append(
+                'emergency_charge',
+                String(
+                  pendingProfile.emergency_charge
+                )
+              );
+            }
+
+
+            formData.append(
+              'emergency_available',
+              pendingProfile.emergency_available
+                ? 'true'
+                : 'false'
+            );
+
+
+            if (
+              pendingProfile.working_hours !==
+              undefined
+            ) {
+              formData.append(
+                'working_hours',
+                pendingProfile.working_hours
+              );
+            }
+
+
+            // --------------------------------------------
+            // JSON fields
+            // --------------------------------------------
+
+            formData.append(
+              'languages',
+              JSON.stringify(
+                Array.isArray(
+                  pendingProfile.languages
+                )
+                  ? pendingProfile.languages
+                  : []
+              )
+            );
+
+
+            formData.append(
+              'working_days',
+              JSON.stringify(
+                Array.isArray(
+                  pendingProfile.working_days
+                )
+                  ? pendingProfile.working_days
+                  : []
+              )
+            );
+
+
+            // --------------------------------------------
+            // Skills
+            // --------------------------------------------
+
+            if (
+              Array.isArray(
+                pendingProfile.skills
+              )
+            ) {
+
+              pendingProfile.skills.forEach(
+                (skill) => {
+                  formData.append(
+                    'skills',
+                    skill
+                  );
+                }
+              );
+
+            }
+
+
+            // --------------------------------------------
+            // PROFILE IMAGE
+            // --------------------------------------------
+
+            if (profileImage) {
+
+              formData.append(
+                'profile_image',
+                profileImage,
+                profileImage.name ||
+                  'profile-image.jpg'
+              );
+
+            }
+
+
+            // --------------------------------------------
+            // SEND PROFILE TO DJANGO
+            // --------------------------------------------
+
+            await api.createWorkerProfile(
+              formData
+            );
+
+
+            // --------------------------------------------
+            // CLEAN TEMPORARY DATA
+            // --------------------------------------------
+
             localStorage.removeItem(
               'workbridge_pending_worker_profile'
             );
-          } else {
-            throw new Error(
-              `Login successful, but profile creation failed: ${profileError.message}`
+
+            await removePendingProfileImage();
+
+
+            showToast(
+              'Professional profile created successfully!'
             );
+
+          } catch (profileError) {
+
+            console.error(
+              'Worker profile creation failed:',
+              profileError
+            );
+
+
+            if (
+              profileError.message
+                ?.toLowerCase()
+                .includes(
+                  'already exists'
+                )
+            ) {
+
+              localStorage.removeItem(
+                'workbridge_pending_worker_profile'
+              );
+
+              await removePendingProfileImage();
+
+            } else {
+
+              throw new Error(
+                `Login successful, but profile creation failed: ${profileError.message}`
+              );
+
+            }
           }
         }
       }
+
+
+      // --------------------------------------------------
+      // LOGIN SUCCESS
+      // --------------------------------------------------
+
+      showToast(
+        'Welcome back!'
+      );
+
+
+      navigate(
+        isProvider
+          ? '/dashboard/provider'
+          : '/dashboard/customer'
+      );
+
+    } catch (err) {
+
+      console.error(
+        'Login failed:',
+        err
+      );
+
+      setError(
+        err?.message ||
+          'Unable to login.'
+      );
+
+    } finally {
+
+      setLoading(false);
+
     }
-
-    showToast('Welcome back!');
-
-    navigate(
-      isProvider
-        ? '/dashboard/provider'
-        : '/dashboard/customer'
-    );
-
-  } catch (err) {
-    setError(err.message);
-
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
   return (
@@ -239,6 +538,7 @@ export default function Login() {
           ? 'Welcome Back, Professional'
           : 'Welcome Back'}
       </h1>
+
 
       <p className="text-navy-500 dark:text-navy-400 mt-2">
         Log in to continue to WorkBridge.
@@ -258,6 +558,7 @@ export default function Login() {
       >
 
         <div>
+
           <label className="label">
             Email
           </label>
@@ -267,11 +568,14 @@ export default function Login() {
             className="input"
             value={identifier}
             onChange={(e) =>
-              setIdentifier(e.target.value)
+              setIdentifier(
+                e.target.value
+              )
             }
             placeholder="you@example.com"
             required
           />
+
         </div>
 
 
@@ -296,28 +600,38 @@ export default function Login() {
           <div className="relative">
 
             <input
-              type={showPass ? 'text' : 'password'}
+              type={
+                showPass
+                  ? 'text'
+                  : 'password'
+              }
               className="input pr-10"
               value={password}
               onChange={(e) =>
-                setPassword(e.target.value)
+                setPassword(
+                  e.target.value
+                )
               }
               placeholder="••••••••"
               required
             />
 
+
             <button
               type="button"
               onClick={() =>
-                setShowPass((s) => !s)
+                setShowPass(
+                  (s) => !s
+                )
               }
               className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400"
               aria-label="Toggle password visibility"
             >
-              {showPass
-                ? <EyeOff className="h-4 w-4" />
-                : <Eye className="h-4 w-4" />
-              }
+              {showPass ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
             </button>
 
           </div>
@@ -330,10 +644,13 @@ export default function Login() {
           disabled={loading}
           className="btn-primary w-full py-2.5"
         >
-          {loading
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : 'Login'
-          }
+
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            'Login'
+          )}
+
         </button>
 
       </form>
@@ -347,18 +664,22 @@ export default function Login() {
           to={`/signup/${role}`}
           className="font-semibold text-primary-600 hover:text-primary-700"
         >
-          Create {isProvider
+          Create{' '}
+          {isProvider
             ? 'Professional'
-            : 'Customer'} Account
+            : 'Customer'}{' '}
+          Account
         </Link>
 
       </p>
 
 
       <Link
-        to={`/login/${isProvider
-          ? 'customer'
-          : 'provider'}`}
+        to={`/login/${
+          isProvider
+            ? 'customer'
+            : 'provider'
+        }`}
         className="block text-center text-sm font-medium text-navy-500 dark:text-navy-400 hover:text-navy-700 mt-3"
       >
         {isProvider

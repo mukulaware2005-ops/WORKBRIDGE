@@ -1,4 +1,3 @@
-
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -6,6 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from .models import Booking
 from .serializers import BookingSerializer
+from .realtime import broadcast_booking_event, broadcast_notification
 from notification.models import Notification
 from messaging.models import Conversation
 
@@ -19,45 +19,30 @@ class BookingViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         if user.role == "CUSTOMER":
-            queryset = Booking.objects.filter(
-                customer=user
-            )
-
+            queryset = Booking.objects.filter(customer=user)
         elif user.role == "WORKER":
-            queryset = Booking.objects.filter(
-                worker__user=user
-            )
-
+            queryset = Booking.objects.filter(worker__user=user)
         else:
             queryset = Booking.objects.none()
 
         booking_status = self.request.query_params.get("status")
-
         if booking_status:
-            queryset = queryset.filter(
-                status=booking_status
-            )
+            queryset = queryset.filter(status=booking_status)
 
         return queryset.select_related(
-            "customer",
-            "worker__user",
-            "service",
+            "customer", "worker__user", "service",
         ).order_by("-created_at")
 
     def perform_create(self, serializer):
-
         if self.request.user.role != "CUSTOMER":
-            raise PermissionDenied(
-                "Only customers can create booking requests."
-            )
+            raise PermissionDenied("Only customers can create booking requests.")
 
         booking = serializer.save(
             customer=self.request.user,
             status=Booking.Status.PENDING,
         )
 
-        # Notify worker about new booking request
-        Notification.objects.create(
+        notif = Notification.objects.create(
             user=booking.worker.user,
             category=Notification.Category.BOOKING,
             title="New booking request",
@@ -67,48 +52,34 @@ class BookingViewSet(viewsets.ModelViewSet):
             ),
         )
 
-    def partial_update(self, request, *args, **kwargs):
+        broadcast_notification(notif)
+        broadcast_booking_event(booking, "created")
 
+    def partial_update(self, request, *args, **kwargs):
         booking = self.get_object()
 
         # =========================
         # WORKER
         # =========================
         if request.user.role == "WORKER":
-
             new_status = request.data.get("status")
 
-            if new_status not in [
-                Booking.Status.UPCOMING,
-                Booking.Status.CANCELLED,
-            ]:
+            if new_status not in [Booking.Status.UPCOMING, Booking.Status.CANCELLED]:
                 return Response(
-                    {
-                        "error":
-                        "Worker can only accept or reject a pending booking."
-                    },
+                    {"error": "Worker can only accept or reject a pending booking."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             if booking.status != Booking.Status.PENDING:
                 return Response(
-                    {
-                        "error":
-                        "Only pending bookings can be accepted or rejected."
-                    },
+                    {"error": "Only pending bookings can be accepted or rejected."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             booking.status = new_status
             booking.save()
 
-            # =========================
-            # ACCEPTED
-            # =========================
             if new_status == Booking.Status.UPCOMING:
-
-                # Create conversation automatically
-                # when worker accepts the booking.
                 Conversation.objects.get_or_create(
                     booking=booking,
                     defaults={
@@ -118,8 +89,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                     },
                 )
 
-                # Notify customer
-                Notification.objects.create(
+                notif = Notification.objects.create(
                     user=booking.customer,
                     category=Notification.Category.BOOKING,
                     title="Booking accepted",
@@ -129,12 +99,11 @@ class BookingViewSet(viewsets.ModelViewSet):
                     ),
                 )
 
-            # =========================
-            # REJECTED
-            # =========================
-            elif new_status == Booking.Status.CANCELLED:
+                broadcast_notification(notif)
+                broadcast_booking_event(booking, "accepted")
 
-                Notification.objects.create(
+            elif new_status == Booking.Status.CANCELLED:
+                notif = Notification.objects.create(
                     user=booking.customer,
                     category=Notification.Category.BOOKING,
                     title="Booking rejected",
@@ -144,39 +113,31 @@ class BookingViewSet(viewsets.ModelViewSet):
                     ),
                 )
 
-            return Response(
-                self.get_serializer(booking).data
-            )
+                broadcast_notification(notif)
+                broadcast_booking_event(booking, "rejected")
+
+            return Response(self.get_serializer(booking).data)
 
         # =========================
         # CUSTOMER
         # =========================
         if request.user.role == "CUSTOMER":
-
             if booking.customer != request.user:
                 return Response(
-                    {
-                        "error":
-                        "You can only update your own bookings."
-                    },
+                    {"error": "You can only update your own bookings."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
             new_status = request.data.get("status")
 
-            # =====================================
-            # CUSTOMER CANCELS UPCOMING BOOKING
-            # =====================================
             if (
                 new_status == Booking.Status.CANCELLED
                 and booking.status == Booking.Status.UPCOMING
             ):
-
                 booking.status = Booking.Status.CANCELLED
                 booking.save()
 
-                # Notify worker
-                Notification.objects.create(
+                notif = Notification.objects.create(
                     user=booking.worker.user,
                     category=Notification.Category.BOOKING,
                     title="Booking cancelled",
@@ -186,23 +147,19 @@ class BookingViewSet(viewsets.ModelViewSet):
                     ),
                 )
 
-                return Response(
-                    self.get_serializer(booking).data
-                )
+                broadcast_notification(notif)
+                broadcast_booking_event(booking, "cancelled")
 
-            # =====================================
-            # CUSTOMER MARKS BOOKING AS COMPLETED
-            # =====================================
+                return Response(self.get_serializer(booking).data)
+
             if (
                 new_status == Booking.Status.COMPLETED
                 and booking.status == Booking.Status.UPCOMING
             ):
-
                 booking.status = Booking.Status.COMPLETED
                 booking.save()
 
-                # Notify worker
-                Notification.objects.create(
+                notif = Notification.objects.create(
                     user=booking.worker.user,
                     category=Notification.Category.BOOKING,
                     title="Booking completed",
@@ -213,32 +170,17 @@ class BookingViewSet(viewsets.ModelViewSet):
                     ),
                 )
 
-                return Response(
-                    self.get_serializer(booking).data
-                )
+                broadcast_notification(notif)
+                broadcast_booking_event(booking, "completed")
 
-            # =====================================
-            # INVALID CUSTOMER STATUS CHANGE
-            # =====================================
+                return Response(self.get_serializer(booking).data)
+
             return Response(
-                {
-                    "error":
-                    "Customers can only cancel or complete upcoming bookings."
-                },
+                {"error": "Customers can only cancel or complete upcoming bookings."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response(
-            {
-                "error": "Invalid user role."
-            },
-            status=status.HTTP_403_FORBIDDEN,
-        )
+        return Response({"error": "Invalid user role."}, status=status.HTTP_403_FORBIDDEN)
 
     def update(self, request, *args, **kwargs):
-        return self.partial_update(
-            request,
-            *args,
-            **kwargs
-        )
-
+        return self.partial_update(request, *args, **kwargs)

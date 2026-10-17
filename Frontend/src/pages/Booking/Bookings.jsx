@@ -1,4 +1,4 @@
-
+import { useBookingSocket } from '../../hooks/useBookingSocket';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -88,6 +88,18 @@ export default function Bookings() {
         setLoading(false);
       });
   }, [tab, showToast]);
+
+useBookingSocket({
+  onBookingUpdate: () => {
+    bookingService.listBookings(tab).then((data) => {
+      setBookings(Array.isArray(data) ? data : []);
+    });
+  },
+  onNotification: (notif) => {
+    showToast(notif.title);
+  },
+});
+
 
   /*
    * CUSTOMER:

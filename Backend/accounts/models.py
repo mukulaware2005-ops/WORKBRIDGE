@@ -1,30 +1,43 @@
+
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.db import models
-
 from .managers import UserManager
 
 
-# =========================================================
-# USER
-# =========================================================
-
 class User(AbstractUser):
-
     class Role(models.TextChoices):
         CUSTOMER = "CUSTOMER", "Customer"
         WORKER = "WORKER", "Worker"
 
     username = None
-
     email = models.EmailField(unique=True)
 
     role = models.CharField(
         max_length=20,
-        choices=Role.choices,
+        choices=Role.choices
     )
 
     is_email_verified = models.BooleanField(default=False)
+
+    address = models.CharField(
+        max_length=255,
+        blank=True
+    )
+
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -35,27 +48,17 @@ class User(AbstractUser):
         return self.email
 
 
-# =========================================================
-# SKILL
-# =========================================================
-
 class Skill(models.Model):
-
     name = models.CharField(
         max_length=100,
-        unique=True,
+        unique=True
     )
 
     def __str__(self):
         return self.name
 
 
-# =========================================================
-# WORKER PROFILE
-# =========================================================
-
 class WorkerProfile(models.Model):
-
     GENDER_CHOICES = [
         ("Male", "Male"),
         ("Female", "Female"),
@@ -66,6 +69,13 @@ class WorkerProfile(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="worker_profile",
+    )
+
+    # Worker profile photo
+    profile_image = models.ImageField(
+        upload_to="worker_profiles/",
+        blank=True,
+        null=True,
     )
 
     title = models.CharField(
@@ -92,6 +102,20 @@ class WorkerProfile(models.Model):
         max_length=255
     )
 
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+
     languages = models.JSONField(
         default=list,
         blank=True
@@ -100,32 +124,32 @@ class WorkerProfile(models.Model):
     skills = models.ManyToManyField(
         Skill,
         related_name="workers",
-        blank=True,
+        blank=True
     )
 
     gender = models.CharField(
         max_length=20,
         choices=GENDER_CHOICES,
-        blank=True,
+        blank=True
     )
 
     starting_price = models.DecimalField(
         max_digits=10,
-        decimal_places=2,
+        decimal_places=2
     )
 
     hourly_rate = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         null=True,
-        blank=True,
+        blank=True
     )
 
     emergency_charge = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         null=True,
-        blank=True,
+        blank=True
     )
 
     emergency_available = models.BooleanField(
@@ -133,13 +157,13 @@ class WorkerProfile(models.Model):
     )
 
     working_days = models.JSONField(
-    default=list,
-    blank=True,
+        default=list,
+        blank=True
     )
 
     working_hours = models.CharField(
         max_length=100,
-        blank=True,
+        blank=True
     )
 
     is_premium = models.BooleanField(
@@ -178,16 +202,11 @@ class WorkerProfile(models.Model):
         return f"{self.user.email} - {self.title}"
 
 
-# =========================================================
-# SERVICE
-# =========================================================
-
 class Service(models.Model):
-
     worker = models.ForeignKey(
         WorkerProfile,
         on_delete=models.CASCADE,
-        related_name="services",
+        related_name="services"
     )
 
     name = models.CharField(
@@ -228,24 +247,17 @@ class Service(models.Model):
         return f"{self.worker.user.email} - {self.name}"
 
 
-
-
-# =========================================================
-# REVIEW
-# =========================================================
-
 class Review(models.Model):
-
     worker = models.ForeignKey(
         WorkerProfile,
         on_delete=models.CASCADE,
-        related_name="reviews",
+        related_name="reviews"
     )
 
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="reviews_given",
+        related_name="reviews_given"
     )
 
     rating = models.PositiveSmallIntegerField()

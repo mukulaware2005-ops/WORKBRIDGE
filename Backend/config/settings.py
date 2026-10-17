@@ -1,3 +1,4 @@
+
 """
 Django settings for config project.
 
@@ -12,23 +13,29 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+
+# =========================================================
+# BASE DIRECTORY
+# =========================================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+# =========================================================
+# SECURITY
+# =========================================================
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-(h(je^41mstverx#+3m)q2@96j72v^&n97tibv!oflm3fq4hbp'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
 
 
-# Application definition
+# =========================================================
+# APPLICATIONS
+# =========================================================
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -38,14 +45,22 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'dashboard',
+
     'rest_framework',
+    'channels',
     'accounts',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    "notification",
-    "booking",
+    'notification',
+    'booking',
     'messaging',
 ]
+
+
+# =========================================================
+# MIDDLEWARE
+# =========================================================
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -58,6 +73,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
+# =========================================================
+# URL / APPLICATION CONFIGURATION
+# =========================================================
 
 ROOT_URLCONF = 'config.urls'
 
@@ -76,11 +96,23 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+# =========================================================
+# CHANNELS
+# =========================================================
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
+
+
+# =========================================================
+# DATABASE
+# =========================================================
 
 DATABASES = {
     'default': {
@@ -90,8 +122,9 @@ DATABASES = {
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
+# =========================================================
+# PASSWORD VALIDATION
+# =========================================================
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -109,8 +142,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.1/topics/i18n/
+# =========================================================
+# INTERNATIONALIZATION
+# =========================================================
 
 LANGUAGE_CODE = 'en-us'
 
@@ -121,14 +155,26 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.1/howto/static-files/
+# =========================================================
+# STATIC FILES
+# =========================================================
 
 STATIC_URL = 'static/'
 
 
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+# =========================================================
+# MEDIA FILES
+# Worker profile images are stored here
+# =========================================================
+
+MEDIA_URL = '/media/'
+
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# =========================================================
+# EMAIL
+# =========================================================
 
 MAILERS = {
     'default': {
@@ -137,18 +183,34 @@ MAILERS = {
 }
 
 
-AUTH_USER_MODEL = "accounts.User"   
+DEFAULT_FROM_EMAIL = "noreply@workbridge.local"
 
+
+# =========================================================
+# CUSTOM USER MODEL
+# =========================================================
+
+AUTH_USER_MODEL = "accounts.User"
+
+
+# =========================================================
+# DJANGO REST FRAMEWORK
+# =========================================================
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
+
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
+
+# =========================================================
+# SIMPLE JWT
+# =========================================================
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
@@ -161,8 +223,9 @@ SIMPLE_JWT = {
 }
 
 
-
-DEFAULT_FROM_EMAIL = "noreply@workbridge.local"
+# =========================================================
+# CORS
+# =========================================================
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",

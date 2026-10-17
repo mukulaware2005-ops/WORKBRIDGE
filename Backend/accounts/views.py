@@ -4,6 +4,10 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Avg
 
+from math import radians, sin, cos, sqrt, atan2
+
+from booking.models import Booking
+
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -15,10 +19,52 @@ from .models import User, WorkerProfile, Service, Review
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
+    UserSerializer,
     WorkerProfileSerializer,
     ServiceSerializer,
     ReviewSerializer,
 )
+
+
+# =========================================================
+# DISTANCE CALCULATION
+# =========================================================
+
+def calculate_distance_km(
+    latitude1,
+    longitude1,
+    latitude2,
+    longitude2
+):
+    """
+    Calculate distance between two GPS coordinates
+    using the Haversine formula.
+    """
+
+    earth_radius_km = 6371.0
+
+    lat1 = radians(float(latitude1))
+    lon1 = radians(float(longitude1))
+
+    lat2 = radians(float(latitude2))
+    lon2 = radians(float(longitude2))
+
+    delta_lat = lat2 - lat1
+    delta_lon = lon2 - lon1
+
+    a = (
+        sin(delta_lat / 2) ** 2
+        + cos(lat1)
+        * cos(lat2)
+        * sin(delta_lon / 2) ** 2
+    )
+
+    c = 2 * atan2(
+        sqrt(a),
+        sqrt(1 - a)
+    )
+
+    return earth_radius_km * c
 
 
 # =========================================================
@@ -95,17 +141,58 @@ class LoginView(generics.GenericAPIView):
 # USER PROFILE
 # =========================================================
 
-class ProfileView(generics.RetrieveAPIView):
+class ProfileView(generics.GenericAPIView):
+    serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
 
-        return Response({
-            "id": user.id,
-            "email": user.email,
-            "role": user.role,
-        })
+        serializer = self.get_serializer(user)
+
+        return Response(
+            serializer.data
+        )
+
+    def put(self, request):
+        user = request.user
+
+        serializer = self.get_serializer(
+            user,
+            data=request.data,
+            partial=False
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        user = serializer.save()
+
+        return Response(
+            self.get_serializer(user).data,
+            status=200
+        )
+
+    def patch(self, request):
+        user = request.user
+
+        serializer = self.get_serializer(
+            user,
+            data=request.data,
+            partial=True
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        user = serializer.save()
+
+        return Response(
+            self.get_serializer(user).data,
+            status=200
+        )
 
 
 # =========================================================
@@ -267,10 +354,8 @@ class WorkerProfileView(generics.GenericAPIView):
         )
 
 
-
-
 # =========================================================
-# PUBLIC WORKER LIST + SEARCH + FILTERS
+# PUBLIC WORKER LIST + SEARCH + FILTERS + LOCATION
 # =========================================================
 
 class WorkerListView(generics.GenericAPIView):
@@ -280,12 +365,22 @@ class WorkerListView(generics.GenericAPIView):
     def get(self, request):
         workers = WorkerProfile.objects.all()
 
+        recommended_worker_ids = []
+
         category = request.query_params.get("category")
         city = request.query_params.get("city")
         skill = request.query_params.get("skill")
         max_price = request.query_params.get("max_price")
         emergency = request.query_params.get("emergency")
         query = request.query_params.get("query")
+
+        latitude = request.query_params.get("latitude")
+        longitude = request.query_params.get("longitude")
+        radius = request.query_params.get("radius")
+
+        # =====================================================
+        # NORMAL EXISTING FILTERS
+        # =====================================================
 
         if category:
             workers = workers.filter(
@@ -314,23 +409,226 @@ class WorkerListView(generics.GenericAPIView):
 
         if query:
             workers = workers.filter(
-                Q(title__icontains=query) |
-                Q(category__icontains=query) |
-                Q(about__icontains=query) |
-                Q(skills__name__icontains=query)
+                Q(title__icontains=query)
+                | Q(category__icontains=query)
+                | Q(about__icontains=query)
+                | Q(skills__name__icontains=query)
             )
 
         workers = workers.distinct()
 
+        # =====================================================
+        # PERSONALIZED RECOMMENDATION
+        # =====================================================
+
+        if (
+            request.user.is_authenticated
+            and request.user.role == User.Role.CUSTOMER
+            and category
+        ):
+            completed_worker_ids = (
+                Booking.objects.filter(
+                    customer=request.user,
+                    worker__category__iexact=category,
+                    status=Booking.Status.COMPLETED,
+                )
+                .values_list(
+                    "worker_id",
+                    flat=True,
+                )
+                .distinct()
+            )
+
+            positive_reviews = (
+                Review.objects.filter(
+                    customer=request.user,
+                    worker_id__in=completed_worker_ids,
+                    rating__gte=4,
+                )
+                .order_by(
+                    "-rating",
+                    "-updated_at",
+                )
+            )
+
+            recommended_worker_ids = []
+
+            for review in positive_reviews:
+                if review.worker_id not in recommended_worker_ids:
+                    recommended_worker_ids.append(
+                        review.worker_id
+                    )
+
+            if recommended_worker_ids:
+                normal_workers = list(workers)
+
+                worker_by_id = {
+                    worker.id: worker
+                    for worker in normal_workers
+                }
+
+                recommended_workers = [
+                    worker_by_id[worker_id]
+                    for worker_id in recommended_worker_ids
+                    if worker_id in worker_by_id
+                ]
+
+                recommended_ids = {
+                    worker.id
+                    for worker in recommended_workers
+                }
+
+                remaining_workers = [
+                    worker
+                    for worker in normal_workers
+                    if worker.id not in recommended_ids
+                ]
+
+                workers = (
+                    recommended_workers
+                    + remaining_workers
+                )
+
+        # =====================================================
+        # SERIALIZE WORKERS
+        # =====================================================
+
         serializer = self.get_serializer(
             workers,
-            many=True
+            many=True,
+            context={
+                "request": request,
+                "recommended_worker_ids":
+                    recommended_worker_ids,
+            },
         )
 
-        return Response(serializer.data)
+        worker_data = serializer.data
 
+        # =====================================================
+        # LOCATION FILTER
+        # =====================================================
 
+        if latitude is not None or longitude is not None:
 
+            if latitude is None or longitude is None:
+                return Response(
+                    {
+                        "error":
+                        "Both latitude and longitude are required."
+                    },
+                    status=400
+                )
+
+            try:
+                customer_latitude = float(latitude)
+                customer_longitude = float(longitude)
+
+            except (TypeError, ValueError):
+                return Response(
+                    {
+                        "error":
+                        "Latitude and longitude must be valid numbers."
+                    },
+                    status=400
+                )
+
+            if not -90 <= customer_latitude <= 90:
+                return Response(
+                    {
+                        "error":
+                        "Latitude must be between -90 and 90."
+                    },
+                    status=400
+                )
+
+            if not -180 <= customer_longitude <= 180:
+                return Response(
+                    {
+                        "error":
+                        "Longitude must be between -180 and 180."
+                    },
+                    status=400
+                )
+
+            # Default radius = 5 km
+            search_radius = 5.0
+
+            if radius is not None:
+                try:
+                    search_radius = float(radius)
+
+                except (TypeError, ValueError):
+                    return Response(
+                        {
+                            "error":
+                            "Radius must be a valid number."
+                        },
+                        status=400
+                    )
+
+            if search_radius <= 0:
+                return Response(
+                    {
+                        "error":
+                        "Radius must be greater than 0."
+                    },
+                    status=400
+                )
+
+            # =================================================
+            # CALCULATE DISTANCE
+            # =================================================
+
+            nearby_workers = []
+
+            for worker, data in zip(
+                workers,
+                worker_data
+            ):
+
+                if (
+                    worker.latitude is None
+                    or worker.longitude is None
+                ):
+                    continue
+
+                distance = calculate_distance_km(
+                    customer_latitude,
+                    customer_longitude,
+                    worker.latitude,
+                    worker.longitude
+                )
+
+                if distance <= search_radius:
+
+                    data["distance_km"] = round(
+                        distance,
+                        2
+                    )
+
+                    nearby_workers.append(data)
+
+            # =================================================
+            # SORT BY DISTANCE
+            # =================================================
+
+            nearby_workers.sort(
+                key=lambda worker:
+                worker["distance_km"]
+            )
+
+            return Response(
+                nearby_workers
+            )
+
+        # =====================================================
+        # NORMAL RESPONSE
+        # =====================================================
+
+        return Response(
+            worker_data
+        )
 
 
 # =========================================================
@@ -369,10 +667,9 @@ class WorkerDetailView(generics.GenericAPIView):
             many=True
         ).data
 
-
         reviews = Review.objects.filter(
-        worker=worker
-    )
+            worker=worker
+        )
 
         review_data = ReviewSerializer(
             reviews,
@@ -384,23 +681,21 @@ class WorkerDetailView(generics.GenericAPIView):
         )["average"]
 
         return Response({
-        "worker": worker_data,
-        "services": service_data,
+            "worker": worker_data,
 
-        "rating":
-            round(average_rating, 1)
-            if average_rating is not None
-            else 0,
+            "services": service_data,
 
-        "reviews_count":
-            reviews.count(),
+            "rating":
+                round(average_rating, 1)
+                if average_rating is not None
+                else 0,
 
-        "reviews":
-            review_data,
+            "reviews_count":
+                reviews.count(),
+
+            "reviews":
+                review_data,
         })
-
-
-
 
 
 # =========================================================
@@ -512,8 +807,6 @@ class ReviewListCreateView(generics.GenericAPIView):
             self.get_serializer(review).data,
             status=201
         )
-
-
 
 
 # =========================================================
@@ -917,8 +1210,7 @@ class ForgotPasswordView(generics.GenericAPIView):
         )
 
         send_mail(
-            subject=
-            "Reset your WorkBridge password",
+            subject="Reset your WorkBridge password",
 
             message=(
                 f"Hello,\n\n"
@@ -930,8 +1222,7 @@ class ForgotPasswordView(generics.GenericAPIView):
                 f"WorkBridge Team"
             ),
 
-            from_email=
-            settings.DEFAULT_FROM_EMAIL,
+            from_email=settings.DEFAULT_FROM_EMAIL,
 
             recipient_list=[
                 user.email
